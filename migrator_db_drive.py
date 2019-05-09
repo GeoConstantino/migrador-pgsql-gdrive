@@ -11,15 +11,23 @@ from decouple import config #settings.ini
 #ID da pasta MP em Mapas - Dados no Google Drive
 ID_MP = "1cvbybdy4dtZfO4o2dSq36qUxVadfUWxb"
 
+try:
+    ONE_VIEW = sys.argv[1]
+except:
+    ONE_VIEW = None
+
 def auth():
+
     return GoogleDrive(GoogleAuth().LocalWebserverAuth())
 
 
 def upload_file(path, folder, filename, drive):
+
     if not os.path.exists(path):
         print('Arquivo não encontrado: {}'.format(filename))
         return
     #print('Arquivo encontrado: {}'.format(path))
+    
     id_folder_destiny = get_id_from_gdrive(folder)
     file_metadata = {'title': filename, 
         'parents': [{'kind': 'drive#fileLink',
@@ -29,12 +37,12 @@ def upload_file(path, folder, filename, drive):
     try:
         file.SetContentFile(path)
         file.Upload()
-    
     except NameError:
         print('Arquivo não encontrado.')
-
+        return
     except :
         print('Erro de conexão na API do Google Drive.')
+        return
     
 
 def create_folder(foldername,drive):
@@ -54,6 +62,7 @@ def create_folder(foldername,drive):
         
 
 def get_id_from_gdrive(name):
+
     parameters = "'{}' in parents and trashed=false".format(ID_MP) 
     for file_list in auth().ListFile({'q':parameters}): 
         for file1 in file_list: 
@@ -61,7 +70,9 @@ def get_id_from_gdrive(name):
                 return (file1['id'])
     #print('ID não encontrado para {}'.format(name))
 
+
 def salva_xlsx(df,folder,filename):
+
     directory = "out/" + folder
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -89,17 +100,18 @@ def db_connect():
         sys.exit()
     
 
-def get_list_views():
+def get_list_views(view=None):
 
-    sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas;"
+    if view == None:
+        sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas;"
+    else:
+        sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas where nome_tabela_pgadmin = '{}';".format(view)
 
     df = psql.read_sql(sql, db_connect())
-
     df.columns = ['area','view']
-    
     df.dropna(subset=['view'], inplace=True)
     df['area'] = (df['area'].str.lower().map(lambda x: unicodedata.normalize('NFKD',x).encode('ASCII','ignore').decode()))   
-    
+        
     return df
 
 
@@ -111,28 +123,28 @@ if __name__ == '__main__':
         connection = db_connect()
         cursor = connection.cursor()
 
-        list_views = get_list_views()
+
+
+        list_views = get_list_views(ONE_VIEW)
 
         for index, row in list_views.iterrows():
             try:
                 sql = "SELECT * FROM {};".format(row['view'])
                 try:
                     df = psql.read_sql(sql,connection)
+                    #print('arquivo:',row['area'])
+                    #print(df.head(2))
+                    salva_xlsx(df,row['area'],row['view'])
                 except psql.DatabaseError as error:
-                    print("View não encontrada no banco de dados: {}".format(row['view']))
+                    #print("View não encontrada no banco de dados: {}".format(row['view']))
                     continue
-                print('arquivo:',row['area'])
-                print(df.head(2))
-                salva_xlsx(df,row['area'],row['view'])
-
             except pg.Error as error:
                 continue    
-                print("Erro no Banco de Dados: {}".format(error))
-           
+                #print("Erro no Banco de Dados: {}".format(error))
             except EnvironmentError as error:
                 continue
-                print('XLSX(erro) view: {}'.format(row['view']))
-                print(error)
+                #print('XLSX(erro) view: {}'.format(row['view']))
+                #print(error)
 
         for index, row in list_views.iterrows():
             print('Tentando upload do arquivo {}'.format(row['view']))
