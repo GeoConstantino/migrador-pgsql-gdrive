@@ -28,8 +28,10 @@ def upload_file(path, folder, filename, drive):
         return
     #print('Arquivo encontrado: {}'.format(path))
     
-    id_folder_destiny = get_id_from_gdrive(folder)
-    file_metadata = {'title': filename, 
+    id_file = find_files(filename,drive)
+
+    id_folder_destiny = find_folder(folder,drive)
+    file_metadata = {'id':id_file,'title': filename, 
         'parents': [{'kind': 'drive#fileLink',
         'id': id_folder_destiny}]}
     file = drive.CreateFile(file_metadata)
@@ -48,7 +50,7 @@ def upload_file(path, folder, filename, drive):
 def create_folder(foldername,drive):
 # se a pasta não existir, ele a criará, se já existir, ele não
 # apaga o conteúdo  
-    if get_id_from_gdrive(foldername):
+    if find_folder(foldername,drive):
         return
 
     try:
@@ -61,15 +63,29 @@ def create_folder(foldername,drive):
         pass
         
 
-def get_id_from_gdrive(name):
+def find_folder(name,drive):
 
     parameters = "'{}' in parents and trashed=false".format(ID_MP) 
-    for file_list in auth().ListFile({'q':parameters}): 
+    for file_list in drive.ListFile({'q':parameters}): 
         for file1 in file_list: 
             if file1['title'] == name:
                 return (file1['id'])
     #print('ID não encontrado para {}'.format(name))
 
+
+def find_files(name,drive):
+
+    parameters = "'{}' in parents and trashed=false".format(ID_MP) 
+    
+    file_list = drive.ListFile({'q':parameters}).GetList()
+    for file in file_list:
+        parameters2 = "'{}' in parents and trashed=false".format(file['id'])
+        file_list2 = drive.ListFile({'q':parameters2}).GetList()
+        for file2 in file_list2:
+            #import ipdb; ipdb.set_trace()
+            if file2['title'] == name:
+                return (file2['id'])
+   
 
 def salva_xlsx(df,folder,filename):
 
