@@ -6,6 +6,7 @@ Arquivos necessários:
 'settings.ini'
 
 Usado para configurar o acesso ao BD PostgreSQL, abstraído com o PYTHON-DECOUPLE
+
 Padrão de preenchimento:
 
 [settings]
@@ -14,13 +15,16 @@ PASSWORD=senha
 HOST=host_servidor
 PORT=porta
 DATABASE=nome_database
+
 ----------------------------------------------------------------------
 'client_secrets.json'
 
 chave extraída do seu projeto na API do Google, para acessar a API é necessário obter este arquivo direto com a página da google.
 
 ----------------------------------------------------------------------
-'settings.yaml' --> Configuração de Acesso da biblioteca PyDrive. 
+'settings.yaml'
+
+Configuração de Acesso da biblioteca PyDrive. 
 
 Padrão de preenchimento:
 
@@ -39,11 +43,11 @@ save_credentials_backend: file
 save_credentials_file: credentials.json
 
 get_refresh_token: True
+
 ----------------------------------------------------------------------
 
 'credentials.json' --> Usado no "client_config" para armazenar a credencial usada. 
 Gerado automaticamente quando realizado login.
-
 
 ----------------------------------------------------------------------
 
