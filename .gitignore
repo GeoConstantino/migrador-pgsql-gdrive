@@ -1,7 +1,5 @@
-CARDÁPIO.xlsx
 settings.ini
 settings.yaml
-creds.json
 credentials.json
 client_secrets.json
 .vscode/settings.json
@@ -9,3 +7,4 @@ Anotacao
 *.xlsx
 *.pyc
 *temp*
+log/log.log

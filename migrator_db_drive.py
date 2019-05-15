@@ -3,7 +3,7 @@ import re
 import sys
 import shutil
 import logging
-import logging.config
+from logging.config import fileConfig
 import unicodedata
 import psycopg2 as pg
 from pydrive.auth import GoogleAuth #credentials.json, settings.yaml, client_secrets.json
@@ -20,8 +20,8 @@ except:
     ONE_VIEW = None
 
 
-logging.config.fileConfig("simple_logging.ini")
-
+fileConfig("simple_logging.ini")
+    
 logger = logging.getLogger()
 
 
@@ -33,7 +33,7 @@ def auth():
 def upload_file(path, folder, filename, drive):
 
     if not os.path.exists(path):
-        logger.error('Arquivo não encontrado: {}'.format(filename))
+        logger.warning('Arquivo não encontrado: {}'.format(filename))
         return
     #print('Arquivo encontrado: {}'.format(path))
     
@@ -146,9 +146,23 @@ def get_list_views(view=None):
         return
     
 
+def check_files():
+
+    essential_files = ('settings.ini', 'client_secrets.json', 'credentials.json', 'settings.yaml', 'simple_logging.ini')
+
+    for file in essential_files:
+        if not os.path.isfile(file):
+            print('Arquivo de configuração inexistente: {}.'.format(file))
+            
+            
+    for file in essential_files:
+        if not os.path.isfile(file):
+            sys.exit(0)
+
 
 if __name__ == '__main__':
 
+    check_files()
 
     drive = auth()
 
@@ -159,12 +173,9 @@ if __name__ == '__main__':
         os.makedirs('log')
 
 
-
-
     try:        
         connection = db_connect()
         cursor = connection.cursor()
-
         list_views = get_list_views(ONE_VIEW)
 
         for index, row in list_views.iterrows():
@@ -177,25 +188,25 @@ if __name__ == '__main__':
                     salva_xlsx(df,row['area'],row['view'])
                     logger.debug('leitura de view: "{}/{}"'.format(row['area'],row['view']))
                 except:
-                    logger.error("erro ao salvar arquivo para upload: '{}/{}'".format(row['area'],row['view']))
+                    logger.warning("erro ao salvar arquivo para upload: '{}/{}'".format(row['area'],row['view']))
                     continue
             except (pg.Error, EnvironmentError) as error:
-                logger.error("view não encontrada no DB: {}".format(row['view']))
+                logger.warning("view não encontrada no DB: {}".format(row['view']))
                 continue    
              
         for index, row in list_views.iterrows():
-            #print('Tentando upload do arquivo {}'.format(row['view']))
-            try:
-                create_folder(row['area'],drive)
-                path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
+            print('Tentando upload do arquivo {}'.format(row['view']))
+            create_folder(row['area'],drive)
+            path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
+            if os.path.isfile(path):
                 upload_file(path,row['area'],row['view'],drive)
                 logger.debug("upload concluído: '{}/{}'".format(row['area'],row['view']))
-
-            except:
-                logger.error('erro de upload no google drive: "{}/{}"'.format(row['area'], row['view']))
+            else:
+                logger.error('arquivo esperado inexistente: "{}/{}"'.format(row['area'], row['view']))
                 continue
 
     except (pg.Error, NameError, AttributeError) as error:
+        #print ("Error while connecting to PostgreSQL.", error)
         logger.error("Error while connecting to PostgreSQL.", error)
 
     finally:
@@ -204,8 +215,6 @@ if __name__ == '__main__':
             connection.close()
             print("PostgreSQL connection is closed")
         
-        print('Fim do Processamento.')
+        #print('Fim do Processamento.')
         logger.error('Fim do Processamento')
         shutil.rmtree('out')
-
-        
