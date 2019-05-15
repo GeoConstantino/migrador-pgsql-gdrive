@@ -147,7 +147,7 @@ def get_list_views(view=None):
 
 def check_files():
 
-    essential_files = ('settings.ini', 'client_secrets.json', 'credentials.json', 'settings.yaml', 'simple_logging.ini')
+    essential_files = ('settings.ini', 'client_secrets.json', 'settings.yaml', 'simple_logging.ini')
 
     for file in essential_files:
         if not os.path.isfile(file):
@@ -161,7 +161,7 @@ def check_files():
 
 if __name__ == '__main__':
 
-    check_files()
+    #check_files()
 
     drive = auth()
 
@@ -212,5 +212,5 @@ if __name__ == '__main__':
             connection.close()
             logger.debug("PostgreSQL connection is closed")
         
-        logger.error('Fim do Processamento')
+        logger.warning('Fim do Processamento')
         shutil.rmtree('out')
