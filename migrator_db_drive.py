@@ -35,7 +35,6 @@ def upload_file(path, folder, filename, drive):
     if not os.path.exists(path):
         logger.warning('Arquivo não encontrado: {}'.format(filename))
         return
-    #print('Arquivo encontrado: {}'.format(path))
     
     id_file = find_files(filename,drive)
 
@@ -79,7 +78,7 @@ def find_folder(name,drive):
         for file1 in file_list: 
             if file1['title'] == name:
                 return (file1['id'])
-    #print('ID não encontrado para {}'.format(name))
+    
 
 
 def find_files(name,drive):
@@ -176,6 +175,7 @@ if __name__ == '__main__':
     try:        
         connection = db_connect()
         cursor = connection.cursor()
+
         list_views = get_list_views(ONE_VIEW)
 
         for index, row in list_views.iterrows():
@@ -183,8 +183,6 @@ if __name__ == '__main__':
                 sql = "SELECT * FROM {};".format(row['view'])
                 try:
                     df = psql.read_sql(sql,connection)
-                    #print('arquivo:',row['area'])
-                    #print(df.head(2))
                     salva_xlsx(df,row['area'],row['view'])
                     logger.debug('leitura de view: "{}/{}"'.format(row['area'],row['view']))
                 except:
@@ -195,7 +193,7 @@ if __name__ == '__main__':
                 continue    
              
         for index, row in list_views.iterrows():
-            print('Tentando upload do arquivo {}'.format(row['view']))
+            logger.debug('Tentando upload do arquivo {}'.format(row['view']))
             create_folder(row['area'],drive)
             path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
             if os.path.isfile(path):
@@ -206,15 +204,13 @@ if __name__ == '__main__':
                 continue
 
     except (pg.Error, NameError, AttributeError) as error:
-        #print ("Error while connecting to PostgreSQL.", error)
         logger.error("Error while connecting to PostgreSQL.", error)
 
     finally:
         if(connection):
             cursor.close()
             connection.close()
-            print("PostgreSQL connection is closed")
+            logger.debug("PostgreSQL connection is closed")
         
-        #print('Fim do Processamento.')
         logger.error('Fim do Processamento')
         shutil.rmtree('out')
