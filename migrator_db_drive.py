@@ -161,7 +161,7 @@ def check_files():
 
 if __name__ == '__main__':
 
-    #check_files()
+    check_files()
 
     drive = auth()
 
