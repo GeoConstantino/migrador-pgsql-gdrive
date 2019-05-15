@@ -1,6 +1,9 @@
 import os
 import re
 import sys
+import shutil
+import logging
+import logging.config
 import unicodedata
 import psycopg2 as pg
 from pydrive.auth import GoogleAuth #credentials.json, settings.yaml, client_secrets.json
@@ -16,6 +19,12 @@ try:
 except:
     ONE_VIEW = None
 
+
+logging.config.fileConfig("simple_logging.ini")
+
+logger = logging.getLogger()
+
+
 def auth():
 
     return GoogleDrive(GoogleAuth().LocalWebserverAuth())
@@ -24,7 +33,7 @@ def auth():
 def upload_file(path, folder, filename, drive):
 
     if not os.path.exists(path):
-        print('Arquivo não encontrado: {}'.format(filename))
+        logger.error('Arquivo não encontrado: {}'.format(filename))
         return
     #print('Arquivo encontrado: {}'.format(path))
     
@@ -40,10 +49,10 @@ def upload_file(path, folder, filename, drive):
         file.SetContentFile(path)
         file.Upload()
     except NameError:
-        print('Arquivo não encontrado.')
+        logger.warning('Arquivo não encontrado.')
         return
     except :
-        print('Erro de conexão na API do Google Drive.')
+        logger.warning('Erro de conexão na API do Google Drive.')
         return
     
 
@@ -59,7 +68,7 @@ def create_folder(foldername,drive):
         folder.Upload()
     
     except drive.Erro as error:
-        print('Erro na criação da pasta: {}'.format(error))
+        logger.error('Erro na criação da pasta: {}'.format(error))
         pass
         
 
@@ -97,9 +106,9 @@ def salva_xlsx(df,folder,filename):
     
     try:
         df.to_excel(name, index=False,float_format="%.2f")
-        print('Arquivo {} salvo com sucesso.'.format(name))
+        logger.debug('Arquivo {} salvo com sucesso.'.format(name))
     except FileNotFoundError as error:
-        print('Erro ao salvar o arquivo: {}'.format(name))
+        logger.error('Erro ao salvar o arquivo: {}'.format(name))
 
 
 def db_connect():
@@ -112,7 +121,7 @@ def db_connect():
                     database = config('DATABASE'))
         return (conn)
     except pg.Error as erro:
-        print("Erro ao conectar no banco de dados: {}".format(erro))
+        logger.error("Erro ao conectar no banco de dados: {}".format(erro))
         sys.exit()
     
 
@@ -124,22 +133,37 @@ def get_list_views(view=None):
         sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas where nome_tabela_pgadmin = '{}';".format(view)
 
     df = psql.read_sql(sql, db_connect())
-    df.columns = ['area','view']
-    df.dropna(subset=['view'], inplace=True)
-    df['area'] = (df['area'].str.lower().map(lambda x: unicodedata.normalize('NFKD',x).encode('ASCII','ignore').decode()))   
+    
+    if not df.empty:
+
+        df.columns = ['area','view']
+        df.dropna(subset=['view'], inplace=True)
+        df['area'] = (df['area'].str.lower().map(lambda x: unicodedata.normalize('NFKD',x).encode('ASCII','ignore').decode()))
+        return df
         
-    return df
+    else:
+        logger.error('view {} indisponível.'.format(view))
+        return
+    
 
 
 if __name__ == '__main__':
 
+
     drive = auth()
+
+    if not os.path.exists('out/'):
+        os.makedirs('out')
+    
+    if not os.path.exists('log/'):
+        os.makedirs('log')
+
+
+
 
     try:        
         connection = db_connect()
         cursor = connection.cursor()
-
-
 
         list_views = get_list_views(ONE_VIEW)
 
@@ -151,39 +175,37 @@ if __name__ == '__main__':
                     #print('arquivo:',row['area'])
                     #print(df.head(2))
                     salva_xlsx(df,row['area'],row['view'])
-                except psql.DatabaseError as error:
-                    #print("View não encontrada no banco de dados: {}".format(row['view']))
+                    logger.debug('leitura de view: "{}/{}"'.format(row['area'],row['view']))
+                except:
+                    logger.error("erro ao salvar arquivo para upload: '{}/{}'".format(row['area'],row['view']))
                     continue
-            except pg.Error as error:
+            except (pg.Error, EnvironmentError) as error:
+                logger.error("view não encontrada no DB: {}".format(row['view']))
                 continue    
-                #print("Erro no Banco de Dados: {}".format(error))
-            except EnvironmentError as error:
-                continue
-                #print('XLSX(erro) view: {}'.format(row['view']))
-                #print(error)
-
+             
         for index, row in list_views.iterrows():
-            print('Tentando upload do arquivo {}'.format(row['view']))
+            #print('Tentando upload do arquivo {}'.format(row['view']))
             try:
                 create_folder(row['area'],drive)
                 path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
                 upload_file(path,row['area'],row['view'],drive)
+                logger.debug("upload concluído: '{}/{}'".format(row['area'],row['view']))
 
             except:
-                print('GOOGLE DRIVE(erro) view: {}, area: {}'.format(row['view'],row['area']))
+                logger.error('erro de upload no google drive: "{}/{}"'.format(row['area'], row['view']))
                 continue
 
-    except pg.Error as error:
-        print ("Error while connecting to PostgreSQL.", error)
-
-    except NameError as error:
-        print ("Error while connecting to PostgreSQL.", error)
-    
-    except AttributeError as error:
-        print ("Error while connecting to PostgreSQL.", error)
+    except (pg.Error, NameError, AttributeError) as error:
+        logger.error("Error while connecting to PostgreSQL.", error)
 
     finally:
         if(connection):
             cursor.close()
             connection.close()
             print("PostgreSQL connection is closed")
+        
+        print('Fim do Processamento.')
+        logger.error('Fim do Processamento')
+        shutil.rmtree('out')
+
+        
