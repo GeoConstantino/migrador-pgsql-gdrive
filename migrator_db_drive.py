@@ -19,6 +19,10 @@ try:
 except:
     ONE_VIEW = None
 
+try:
+    KEEP_FILES = sys.argv[2]
+except:
+    KEEP_FILES = None
 
 fileConfig("simple_logging.ini")
     
@@ -147,7 +151,7 @@ def get_list_views(view=None):
 
 def check_files():
 
-    essential_files = ('settings.ini', 'client_secrets.json', 'settings.yaml', 'simple_logging.ini')
+    essential_files = ('settings.ini', 'settings.yaml', 'simple_logging.ini')
 
     for file in essential_files:
         if not os.path.isfile(file):
@@ -213,4 +217,8 @@ if __name__ == '__main__':
             logger.debug("PostgreSQL connection is closed")
         
         logger.warning('Fim do Processamento')
-        shutil.rmtree('out')
+        
+        if KEEP_FILES == "keep":
+            print('Comando keep: Pasta out não removida')
+        else:
+            shutil.rmtree('out')
