@@ -8,3 +8,5 @@ Anotacao
 *.pyc
 *temp*
 log/log.log
+__pycache__
+.vscode

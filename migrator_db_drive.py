@@ -3,7 +3,7 @@ import re
 import sys
 import shutil
 import logging
-from logging.config import fileConfig
+from logging.handlers import RotatingFileHandler
 import unicodedata
 import psycopg2 as pg
 from pydrive.auth import GoogleAuth #credentials.json, settings.yaml, client_secrets.json
@@ -24,9 +24,21 @@ try:
 except:
     KEEP_FILES = None
 
-fileConfig("simple_logging.ini")
-    
-logger = logging.getLogger()
+
+log_formatter = logging.Formatter('%(asctime)s:::%(levelname)s:::%(filename)s:::%(lineno)s:::%(message)s')
+
+logFile = 'log/migrator.log'
+
+my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=50*1024*1024, 
+                                 backupCount=None, encoding=None, delay=0)
+
+my_handler.setFormatter(log_formatter)
+my_handler.setLevel(logging.WARNING)
+
+logger = logging.getLogger('root')
+logger.setLevel(logging.WARNING)
+
+logger.addHandler(my_handler)
 
 
 def auth():
@@ -84,7 +96,6 @@ def find_folder(name,drive):
                 return (file1['id'])
     
 
-
 def find_files(name,drive):
 
     parameters = "'{}' in parents and trashed=false".format(ID_MP) 
@@ -138,12 +149,10 @@ def get_list_views(view=None):
     df = psql.read_sql(sql, db_connect())
     
     if not df.empty:
-
         df.columns = ['area','view']
         df.dropna(subset=['view'], inplace=True)
         df['area'] = (df['area'].str.lower().map(lambda x: unicodedata.normalize('NFKD',x).encode('ASCII','ignore').decode()))
         return df
-        
     else:
         logger.error('view {} indisponível.'.format(view))
         return
@@ -151,7 +160,7 @@ def get_list_views(view=None):
 
 def check_files():
 
-    essential_files = ('settings.ini', 'settings.yaml', 'simple_logging.ini')
+    essential_files = ('settings.ini', 'settings.yaml')
 
     for file in essential_files:
         if not os.path.isfile(file):
@@ -182,20 +191,23 @@ if __name__ == '__main__':
 
         list_views = get_list_views(ONE_VIEW)
 
-        for index, row in list_views.iterrows():
-            try:
-                sql = "SELECT * FROM {};".format(row['view'])
+        try:
+            for index, row in list_views.iterrows():
                 try:
-                    df = psql.read_sql(sql,connection)
-                    salva_xlsx(df,row['area'],row['view'])
-                    logger.debug('leitura de view: "{}/{}"'.format(row['area'],row['view']))
-                except:
-                    logger.warning("erro ao salvar arquivo para upload: '{}/{}'".format(row['area'],row['view']))
-                    continue
-            except (pg.Error, EnvironmentError) as error:
-                logger.warning("view não encontrada no DB: {}".format(row['view']))
-                continue    
-             
+                    sql = "SELECT * FROM {};".format(row['view'])
+                    try:
+                        df = psql.read_sql(sql,connection)
+                        salva_xlsx(df,row['area'],row['view'])
+                        logger.debug('leitura de view: "{}/{}"'.format(row['area'],row['view']))
+                    except:
+                        logger.warning("erro ao salvar arquivo para upload: '{}/{}'".format(row['area'],row['view']))
+                        continue
+                except (pg.Error, EnvironmentError) as error:
+                    logger.warning("view não encontrada no DB: {}".format(row['view']))
+                    continue    
+        except AttributeError as error:
+            logger.warning('DF vazio. View não encontrada.')
+
         for index, row in list_views.iterrows():
             logger.debug('Tentando upload do arquivo {}'.format(row['view']))
             create_folder(row['area'],drive)
