@@ -1,6 +1,12 @@
 # migrador-pgsql-gdrive
 Capta views no PostgreSQL e importa como xlsx no Google Drive
 
+Modo de usar:
+parâmetros: 1º para uma view específica, passando um nome de view. 2º para manter os arquivos gerados, passando "keep"
+
+Ex.: python migrador-pgsql-gdrive "datapedia.base_educ" "keep"
+
+
 Arquivos necessários:
 ----------------------------------------------------------------------
 'settings.ini'
@@ -45,10 +51,8 @@ save_credentials_file: credentials.json
 get_refresh_token: True
 
 ----------------------------------------------------------------------
-
-'credentials.json' --> Usado no "client_config" para armazenar a credencial usada. 
+'credentials.json'
+Usado no "client_config" para armazenar a credencial usada. 
 Gerado automaticamente quando realizado login.
 
-----------------------------------------------------------------------
 
-'simple_logging.ini' --> Configuração de Logging
