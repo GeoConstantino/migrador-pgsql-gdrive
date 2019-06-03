@@ -66,7 +66,7 @@ def upload_file(path, folder, filename, drive):
     except NameError:
         logger.warning('Arquivo não encontrado.')
         return
-    except :
+    except:
         logger.warning('Erro de conexão na API do Google Drive.')
         return
     
@@ -205,19 +205,20 @@ if __name__ == '__main__':
                 except (pg.Error, EnvironmentError) as error:
                     logger.warning("view não encontrada no DB: {}".format(row['view']))
                     continue    
-        except AttributeError as error:
-            logger.warning('DF vazio. View não encontrada.')
 
-        for index, row in list_views.iterrows():
-            logger.debug('Tentando upload do arquivo {}'.format(row['view']))
-            create_folder(row['area'],drive)
-            path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
-            if os.path.isfile(path):
-                upload_file(path,row['area'],row['view'],drive)
-                logger.debug("upload concluído: '{}/{}'".format(row['area'],row['view']))
-            else:
-                logger.error('arquivo esperado inexistente: "{}/{}"'.format(row['area'], row['view']))
-                continue
+            for index, row in list_views.iterrows():
+                logger.debug('Tentando upload do arquivo {}'.format(row['view']))
+                create_folder(row['area'],drive)
+                path = 'out/{}/{}.xlsx'.format(row['area'],row['view'])
+                if os.path.isfile(path):
+                    upload_file(path,row['area'],row['view'],drive)
+                    logger.debug("upload concluído: '{}/{}'".format(row['area'],row['view']))
+                else:
+                    logger.error('arquivo esperado inexistente: "{}/{}"'.format(row['area'], row['view']))
+                    continue
+        
+        except AttributeError as error:
+            logger.warning('DF vazio. View não encontrada: {}'.format(sys.argv[1]))
 
     except (pg.Error, NameError, AttributeError) as error:
         logger.error("Error while connecting to PostgreSQL.", error)
