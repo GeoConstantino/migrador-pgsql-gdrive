@@ -29,7 +29,7 @@ log_formatter = logging.Formatter('%(asctime)s:::%(levelname)s:::%(filename)s:::
 
 logFile = 'log/migrator.log'
 
-my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=50*1024*1024, 
+my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=1024*1024, 
                                  backupCount=None, encoding=None, delay=0)
 
 my_handler.setFormatter(log_formatter)
