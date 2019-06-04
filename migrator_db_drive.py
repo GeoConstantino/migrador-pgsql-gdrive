@@ -1,20 +1,24 @@
+import argparse
 import os
+import logging
 import re
 import sys
 import shutil
-import logging
-from logging.handlers import RotatingFileHandler
 import unicodedata
+
+from logging.handlers import RotatingFileHandler
+
 import psycopg2 as pg
+
+from decouple import config #settings.ini
+from pandas.io import sql as psql
 from pydrive.auth import GoogleAuth #credentials.json, settings.yaml, client_secrets.json
 from pydrive.drive import GoogleDrive
-from pandas.io import sql as psql
-from decouple import config #settings.ini
 
 #ID da pasta MP em Mapas - Dados no Google Drive
 ID_MP = "1cvbybdy4dtZfO4o2dSq36qUxVadfUWxb"
 
-try:
+'''try:
     ONE_VIEW = sys.argv[1]
 except:
     ONE_VIEW = None
@@ -22,7 +26,7 @@ except:
 try:
     KEEP_FILES = sys.argv[2]
 except:
-    KEEP_FILES = None
+    KEEP_FILES = None'''
 
 
 log_formatter = logging.Formatter('%(asctime)s:::%(levelname)s:::%(filename)s:::%(lineno)s:::%(message)s')
@@ -140,12 +144,15 @@ def db_connect():
     
 
 def get_list_views(view=None):
-
-    if view == None:
-        sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas;"
-    else:
-        sql = "select distinct area_mae, nome_tabela_pgadmin from datapedia.temas where nome_tabela_pgadmin = '{}';".format(view)
-
+    sql = """
+        SELECT distinct area_mae, nome_tabela_pgadmin 
+        FROM datapedia.temas;"""
+    if view is not None:
+        sql = """
+        SELECT distinct area_mae, nome_tabela_pgadmin 
+        FROM datapedia.temas 
+        WHERE nome_tabela_pgadmin = '{}';""".format(view)
+    
     df = psql.read_sql(sql, db_connect())
     
     if not df.empty:
@@ -174,6 +181,20 @@ def check_files():
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--keep',
+        help='"True": Não deleta a pasta temporária com o arquivo gerado'
+    )
+    parser.add_argument(
+        '--view',
+        help='"tabela.view": Nome da view para execução unitária'
+    )
+    
+    args = parser.parse_args()
+    one_view = args.view
+    keep_view = args.keep
+
     check_files()
 
     drive = auth()
@@ -189,7 +210,7 @@ if __name__ == '__main__':
         connection = db_connect()
         cursor = connection.cursor()
 
-        list_views = get_list_views(ONE_VIEW)
+        list_views = get_list_views(one_view)
 
         try:
             for index, row in list_views.iterrows():
@@ -231,7 +252,7 @@ if __name__ == '__main__':
         
         logger.warning('Fim do Processamento')
         
-        if KEEP_FILES == "keep":
+        if keep_view == "True":
             print('Comando keep: Pasta out não removida')
         else:
             shutil.rmtree('out')
