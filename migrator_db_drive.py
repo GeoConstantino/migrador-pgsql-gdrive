@@ -18,17 +18,6 @@ from pydrive.drive import GoogleDrive
 #ID da pasta MP em Mapas - Dados no Google Drive
 ID_MP = "1cvbybdy4dtZfO4o2dSq36qUxVadfUWxb"
 
-'''try:
-    ONE_VIEW = sys.argv[1]
-except:
-    ONE_VIEW = None
-
-try:
-    KEEP_FILES = sys.argv[2]
-except:
-    KEEP_FILES = None'''
-
-
 log_formatter = logging.Formatter('%(asctime)s:::%(levelname)s:::%(filename)s:::%(lineno)s:::%(message)s')
 
 logFile = 'log/migrator.log'
@@ -250,7 +239,7 @@ if __name__ == '__main__':
             connection.close()
             logger.debug("PostgreSQL connection is closed")
         
-        logger.warning('Fim do Processamento')
+        logger.debug('Fim do Processamento')
         
         if keep_view == "True":
             print('Comando keep: Pasta out não removida')
