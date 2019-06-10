@@ -10,3 +10,5 @@ Anotacao
 log/log.log
 __pycache__
 .vscode
+log/migrator.log
+
